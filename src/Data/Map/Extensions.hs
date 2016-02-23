@@ -9,6 +9,8 @@ module Data.Map.Extensions (
   fromLists,
   filterM,
   transpose,
+  scanl1,
+  scanr1,
   getGroups,
   groupMapBy,
   fromList2,
@@ -20,12 +22,13 @@ module Data.Map.Extensions (
   Lookup3,
   Lookup4,
   ) where
-import Prelude hiding (take, drop)
-import Data.Map
+import           Prelude hiding (take, drop, scanl1, scanr1)
+import qualified Prelude
+import           Data.Map
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.List as List
-import Data.Function
+import           Data.Function
 
 -- these are a bit clunky to read and write. but great for the typechecker
 type Lookup  ix1 tgt = Map.Map ix1 tgt
