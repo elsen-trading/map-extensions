@@ -1,34 +1,46 @@
 -- extensions to Data.Map.Lazy
 module Data.Map.Extensions (
   module Data.Map,
+
   drop,
   take,
   slice,
   slicei,
+
   keepKeys,
-  fromLists,
+  dropKeys,
+
+
   filterM,
   transpose,
+
   scanl1,
   scanr1,
-  getGroups,
-  groupMapBy,
+
+  groupBy,
+  groupKeysBy,
+  groupElemsBy,
+
   fromList2,
+  fromLists,
+
   lookup2,
   lookup3,
   lookup4,
+
   Lookup,
   Lookup2,
   Lookup3,
   Lookup4,
   ) where
-import           Prelude hiding (take, drop, scanl1, scanr1)
+import           Prelude hiding (take, drop, scanl1, scanr1, lookup)
 import qualified Prelude
 import           Data.Map
 import qualified Data.Map as Map
-import qualified Data.Set as Set
+import           Data.Set (Set(..))
 import qualified Data.List as List
-import           Data.Function
+
+import           Control.Monad ((>=>))
 
 -- these are a bit clunky to read and write. but great for the typechecker
 type Lookup  ix1 tgt = Map.Map ix1 tgt
@@ -123,60 +135,51 @@ transpose :: (Ord a, Ord b) => Lookup2 a b v -> Lookup2 b a v
 transpose table = let
   foo = toList . fmap toList $ table
   bar = concatMap (\(a,bvs{-[(b,v)]-}) -> zip (repeat a) bvs) foo
-  baz = (\(a,(b,v)) -> (b,[(a,v)])) <$> bar
-  in fmap fromList . fromListWith (++) $ baz
-
--- ^NEEDS TEST^
-getGroups :: Ord a => [(a,b)] -> [(a, [b])]
-getGroups xs = let
-  sorted = List.sortBy (compare `on` fst) xs
-  grouped = List.groupBy ((==) `on` fst) xs
-  go :: ([a],[b]) -> (a,[b]) -- precondition :: all a's are equal
-  go (xs, ys) = (head xs, ys)
-  in go . unzip <$> grouped
+  baz = (\(a,(b,v)) -> (b,a,v)) <$> bar
+  in fromList2 baz
 
 -- O(n * log(n))
--- ^NEEDS TEST^
-groupMapBy :: (Ord a, Ord b) => (a -> b) -> Lookup a v -> Lookup2 b a v
-groupMapBy f m = let
-  -- [(a,v)]
-  l = Map.toList m
-  -- [(b,(a,v))]
-  l' = (\(a,v) -> (f a, (a, v))) `List.map` l
-  in Map.fromList <$> Map.fromListWith (++) (getGroups l')
+groupKeysBy :: (Ord a, Ord b) => (a -> b) -> Lookup a v -> Lookup2 b a v
+groupKeysBy f = fmap fromList . groupBy (f . fst) . toList
 
-keepKeys :: Ord k => Set.Set k -> Map k a -> Map k a
-keepKeys keys m = Map.intersection m (Map.fromSet (const ()) keys)
+groupElemsBy :: (Ord a, Ord b) => (v -> b) -> Lookup a v -> Lookup2 b a v
+groupElemsBy f = fmap fromList . groupBy (f . snd) . toList
+
+-- Could this be generalized to traversable?
+groupBy :: Ord b => (a -> b) -> [a] -> Map b [a]
+groupBy f = fromListWith (++) . fmap (\a -> (f a, pure a))
+
+keepKeys :: Ord k => Set k -> Map k a -> Map k a
+keepKeys keys m = intersection m (fromSet (const ()) keys)
+
+dropKeys :: Ord k => Set k -> Map k a -> Map k a
+dropKeys keys m = m \\ (fromSet (const ()) keys)
 
 fromLists :: Ord k => [k] -> [v] -> Map.Map k v
-fromLists ks vs = Map.fromList $ zip ks vs
+fromLists ks vs = fromList $ zip ks vs
 
 scanl1 :: (Ord k) => (a -> a -> a) -> Lookup k a -> Lookup k a
 scanl1 f m = let
-  (ks, vs) = unzip $ Map.toList m
-  in Map.fromList $ zip ks $ Prelude.scanl1 f vs
+  (ks, vs) = unzip $ toList m
+  in fromList $ zip ks $ Prelude.scanl1 f vs
 
 scanr1 :: (Ord k) => (a -> a -> a) -> Lookup k a -> Lookup k a
 scanr1 f m = let
-  (ks, vs) = unzip $ Map.toList m
-  in Map.fromList $ zip ks $ Prelude.scanr1 f vs
+  (ks, vs) = unzip $ toList m
+  in fromList $ zip ks $ Prelude.scanr1 f vs
 
 fromList2 :: (Ord a, Ord b) => [(a,b,v)] -> Lookup2 a b v
 fromList2 xs = let
   ys = (\(a,b,v) -> (a,[(b,v)])) <$> xs
-  in fmap Map.fromList $ Map.fromListWith (++) ys
+  in fmap fromList $ fromListWith (++) ys
 
 lookup2 :: (Ord a, Ord b) => a -> b -> Lookup2 a b v -> Maybe v
-lookup2 k1 k2 m = Map.lookup k1 m >>= Map.lookup k2
+lookup2 k1 k2 = lookup k1 >=> lookup k2
 
 lookup3 :: (Ord a, Ord b, Ord c) => a -> b -> c -> Lookup3 a b c v -> Maybe v
-lookup3 k1 k2 k3 m = Map.lookup k1 m >>= Map.lookup k2 >>= Map.lookup k3
+lookup3 k1 k2 k3 = lookup k1 >=> lookup k2 >=> lookup k3
 
 lookup4 :: (Ord a, Ord b, Ord c, Ord d) =>
   a -> b -> c -> d -> Lookup4 a b c d v -> Maybe v
-lookup4 k1 k2 k3 k4 m =
-      Map.lookup k1 m
-  >>= Map.lookup k2
-  >>= Map.lookup k3
-  >>= Map.lookup k4
+lookup4 k1 k2 k3 k4 = lookup k1 >=> lookup k2 >=> lookup k3 >=> lookup k4
 
