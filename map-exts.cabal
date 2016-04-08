@@ -16,21 +16,27 @@ executable example
   hs-source-dirs:      src
   main-is:             Main.hs
   default-language:    Haskell2010
-  build-depends:       base >= 4.7 && < 5
-                     , containers
+  build-depends:       base >= 4.7 && < 5,
+                       containers
+  other-modules:       Data.Map.Extensions,
+                       Data.Map.Function
+
 executable titanic-example
   hs-source-dirs:      src
   main-is:             Titanic.hs
   default-language:    Haskell2010
-  build-depends:       base >= 4.7 && < 5
-                     , containers
-                     , cassava
-                     , bytestring
+  build-depends:       base >= 4.7 && < 5,
+                       containers,
+                       cassava,
+                       bytestring
+  other-modules:       Data.Map.Extensions,
+                       Data.Map.Function
 
 library
   hs-source-dirs:      src
   exposed-modules:     Data.Map.Extensions
+  other-modules:       Data.Map.Function
   default-language:    Haskell2010
-  build-depends:       base >= 4.7 && < 5
-                     , containers
+  build-depends:       base >= 4.7 && < 5,
+                       containers
 

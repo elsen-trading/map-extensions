@@ -11,6 +11,7 @@ import qualified Data.ByteString.Char8 as B
 import           Data.Foldable (toList)
 import           Data.Map.Extensions as Map hiding (toList)
 import qualified Data.Map.Extensions as Map
+import           Data.Map.Function
 
 data Gender
   = Male
@@ -102,10 +103,13 @@ main = do
   case passengers of
     Left  s -> putStrLn s
     Right ps -> do
-      print $ fmap2 length $ fmap (groupBy pclass) $ groupBy sex ps
+      print $ groupBy sex ps
+        <&> groupBy pclass
+        <&&> length
 
       -- probability of survivorship
-      print $ fmap2 (fmtPct . mean . fmap (switch 1 0 . survived)) $
-        fmap (groupBy pclass) $ groupBy sex ps
-
+      print $ groupBy sex ps
+        <&> groupBy pclass
+        <&&&> switch 1 0 . survived
+        <&&> fmtPct . mean
 
