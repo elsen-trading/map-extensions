@@ -1,4 +1,14 @@
--- extensions to Data.Map.Lazy
+{-|
+	Module      : Data.Map.Extensions
+	Description : Short description
+	Copyright   : (c) Elsen, Inc., 2016
+	License     : BSD3
+	Maintainer  : cooper.charles.m@gmail.com
+	Stability   : experimental
+	Portability : POSIX
+
+  This module is a drop-in replacement for `Data.Map`. It is intended to be imported as @import qualified Data.Map.Extensions as Map@.
+-}
 module Data.Map.Extensions (
   module Data.Map,
 
@@ -42,10 +52,13 @@ import qualified Data.List as List
 
 import           Control.Monad ((>=>))
 
--- these are a bit clunky to read and write. but great for the typechecker
+-- | Synonym for Map
 type Lookup  ix1 tgt = Map.Map ix1 tgt
+-- | A doubly nested Map
 type Lookup2 ix1 ix2 tgt = Map.Map ix1 (Map.Map ix2 tgt)
+-- | A triply nested Map
 type Lookup3 ix1 ix2 ix3 tgt = Map.Map ix1 (Lookup2 ix2 ix3 tgt)
+-- | A quadruply nested Map
 type Lookup4 ix1 ix2 ix3 ix4 tgt = Lookup2 ix1 ix2 (Lookup2 ix3 ix4 tgt)
 
 ex1 :: (Ord a, Ord b, Ord c) => Lookup3 a b c d -> Lookup3 c b a d
@@ -54,7 +67,8 @@ ex1 = fmap transpose . transpose . fmap transpose
 ex2 :: (Ord a, Ord b) => Lookup2 a b c -> Lookup2 a b d -> Lookup2 a b (c,d)
 ex2 = Map.intersectionWith (Map.intersectionWith (,))
 
--- exclusive slice
+-- | Exclusive slice
+--
 -- O(log n)
 sliceEx :: Ord k => Map.Map k v -> k -> k -> Map.Map k v
 sliceEx m l r = let
@@ -62,7 +76,10 @@ sliceEx m l r = let
   (_, mid) = Map.split l lo -- O(log n)
   in mid
 
--- inclusive slice
+-- | Inclusive key-based slice.
+-- Returns a map whose keys are all between the
+-- lower and upper bounds (inclusive).
+--
 -- O(log n)
 slice :: Ord k => Map.Map k v -> k -> k -> Map.Map k v
 slice m l r = let
@@ -76,18 +93,20 @@ slice m l r = let
     Just v  -> Map.insert l v ret      -- O(log n)
   in ret'
 
--- O(log n)
--- slices on left and right indices.
+-- | Inclusive index-based slice.
+-- Run an inclusive slice given left and right indices.
 -- if the left or right index is out of bounds,
--- the left index of 0 or right index of (Map.size m - 1)
--- will be used respectively
+-- the left index of @0@ or right index of (@Map.size m - 1@)
+-- will be used respectively.
+--
+-- O(log n)
 slicei :: Ord k => Map.Map k v -> Int -> Int -> Map.Map k v
 slicei m l sz = let
   r   = l + sz - 1 -- 0 1 -> [0,1)
-  len = Map.size m                    -- O(1)
+  len = Map.size m                     -- O(1)
   lv  = fst $ elemAt (max 0       l) m -- O(log n)
   rv  = fst $ elemAt (min (len-1) r) m -- O(log n)
-  in slice m lv rv                    -- O(log n)
+  in slice m lv rv                     -- O(log n)
 
 data OneOrBoth a b = First a | Second b | Both a b
 outerJoinWith :: Ord k => (OneOrBoth a b -> c) -> Map.Map k a -> Map.Map k b -> Map.Map k c
@@ -104,33 +123,22 @@ dropRight n m | n <= 0     = m
               | otherwise  = dropRight (n-1) (deleteMax m)
 
 -- O(n * log n). this could be O(log n) if we used Map.split cleverly.
+-- | Drops `n` elements from the (left hand side of the) `Map`.
 drop :: Int -> Map k v -> Map k v
 drop = dropLeft
 
 -- O(n * log n). this could be O(log n) if we used Map.split cleverly.
+-- | Takes `n` elements from the (left hand side of the) `Map`.
 take :: Int -> Map k v -> Map k v
 take n m = dropRight (Map.size m - n) m
 
+-- | This generalizes `Map.filter` to a monadic predicate.
 filterM :: (Ord k, Monad m) => (v -> m Bool) -> Map k v -> m (Map k v)
 filterM pred m = do
   checks <- mapM pred m
   return $ intersection m (Map.filter id checks)
 
--- this is a scalable, typesafe way to munge data.
--- e.g. if we had Lookup3 Inst.Equity Day Code Double
--- and we wanted Lookup3 Code Day Inst.Equity Double,
--- we would simply write
--- fmap transpose {-Code Inst.Equity Day -> Code Day Inst.Equity-}
--- . transpose {-Inst.Equity Code Day -> Code Inst.Equity Day-}
--- . fmap transpose {-Inst.Equity Day Code -> Inst.Equity Code Day-}
--- General rule is, if it typechecks, it's definitely correct.
--- As another example, if we wanted to inner join like so:
--- Lookup2 Inst.Equity Day Double -> Lookup2 Inst.Equity Day Int
--- -> Lookup2 Inst.Equity Day (Double, Int)
--- we could write
--- intersectionWith (intersectionWith (,))
---
--- ^NEEDS TEST^
+-- | Transpose the first two indexes of a nested `Map`.
 transpose :: (Ord a, Ord b) => Lookup2 a b v -> Lookup2 b a v
 transpose table = let
   foo = toList . fmap toList $ table
@@ -138,47 +146,78 @@ transpose table = let
   baz = (\(a,(b,v)) -> (b,a,v)) <$> bar
   in fromList2 baz
 
+-- | Run a grouping function over the keys of a `Map`.
+--
 -- O(n * log(n))
 groupKeysBy :: (Ord a, Ord b) => (a -> b) -> Lookup a v -> Lookup2 b a v
 groupKeysBy f = fmap fromList . groupBy (f . fst) . toList
 
+-- | Run a grouping function over the values of a `Map`.
+-- 
+-- O(n * log(n))
 groupElemsBy :: (Ord a, Ord b) => (v -> b) -> Lookup a v -> Lookup2 b a v
 groupElemsBy f = fmap fromList . groupBy (f . snd) . toList
 
--- Could this be generalized to traversable?
+-- | Run a grouping function over a `Map`.
+-- The supplied function will map each element of the list to a group.
+-- The resulting `Map` will map the groups produced by the supplied function
+-- to the lists of elements which produced that group.
+--
+-- Perhaps this is better illustrated by example:
+--
+-- >>> let even s = s `mod` 2 == 0
+-- >>> groupBy even [1,2,3,4]
+-- fromList [(False,[3,1]),(True,[4,2])]
+--
+-- O(n * log(n))
 groupBy :: Ord b => (a -> b) -> [a] -> Map b [a]
 groupBy f = fromListWith (++) . fmap (\a -> (f a, pure a))
 
+-- | Only keep keys that occur in the supplied `Set`.
 keepKeys :: Ord k => Set k -> Map k a -> Map k a
 keepKeys keys m = intersection m (fromSet (const ()) keys)
 
+-- | Drop the keys occurring in the supplied `Set`.
 dropKeys :: Ord k => Set k -> Map k a -> Map k a
 dropKeys keys m = m \\ (fromSet (const ()) keys)
 
+-- | Create a Map from a list of keys and a list of values.
+--
+-- prop> fromLists ks vs = fromList (zip ks vs)
 fromLists :: Ord k => [k] -> [v] -> Map.Map k v
 fromLists ks vs = fromList $ zip ks vs
 
+-- | Perform a left scan on the values of a `Map`.
+--
+-- prop> Map.elems (Map.scanl1 f xs) = List.scanl1 f (Map.elems xs)
 scanl1 :: (Ord k) => (a -> a -> a) -> Lookup k a -> Lookup k a
 scanl1 f m = let
   (ks, vs) = unzip $ toList m
   in fromList $ zip ks $ Prelude.scanl1 f vs
 
+-- | Perform a right scan on the values of a `Map`.
+--
+-- prop> Map.elems (Map.scanr1 f xs) = List.scanr1 f (Map.elems xs)
 scanr1 :: (Ord k) => (a -> a -> a) -> Lookup k a -> Lookup k a
 scanr1 f m = let
   (ks, vs) = unzip $ toList m
   in fromList $ zip ks $ Prelude.scanr1 f vs
 
+-- | Generate a Lookup2 from a list of triples.
 fromList2 :: (Ord a, Ord b) => [(a,b,v)] -> Lookup2 a b v
 fromList2 xs = let
   ys = (\(a,b,v) -> (a,[(b,v)])) <$> xs
   in fmap fromList $ fromListWith (++) ys
 
+-- | Lookup a value two levels deep in a Lookup2
 lookup2 :: (Ord a, Ord b) => a -> b -> Lookup2 a b v -> Maybe v
 lookup2 k1 k2 = lookup k1 >=> lookup k2
 
+-- | Lookup a value three levels deep in a Lookup3
 lookup3 :: (Ord a, Ord b, Ord c) => a -> b -> c -> Lookup3 a b c v -> Maybe v
 lookup3 k1 k2 k3 = lookup k1 >=> lookup k2 >=> lookup k3
 
+-- | Lookup a value four levels deep in a Lookup4
 lookup4 :: (Ord a, Ord b, Ord c, Ord d) =>
   a -> b -> c -> d -> Lookup4 a b c d v -> Maybe v
 lookup4 k1 k2 k3 k4 = lookup k1 >=> lookup k2 >=> lookup k3 >=> lookup k4
