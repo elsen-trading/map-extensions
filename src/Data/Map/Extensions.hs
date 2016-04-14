@@ -108,10 +108,6 @@ slicei m l sz = let
   rv  = fst $ elemAt (min (len-1) r) m -- O(log n)
   in slice m lv rv                     -- O(log n)
 
-data OneOrBoth a b = First a | Second b | Both a b
-outerJoinWith :: Ord k => (OneOrBoth a b -> c) -> Map.Map k a -> Map.Map k b -> Map.Map k c
-outerJoinWith f = Map.mergeWithKey (\_ a b -> Just $ f (Both a b)) (f . First <$>) (f . Second <$>)
-
 dropLeft :: Int -> Map k v -> Map k v
 dropLeft n m | n <= 0      = m
              | Map.null m  = m
