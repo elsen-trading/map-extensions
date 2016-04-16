@@ -1,11 +1,11 @@
 {-|
 	Module      : Data.Map.Extensions
-	Description : Short description
+	Description : Extensions to Data.Map
 	Copyright   : (c) Elsen, Inc., 2016
 	License     : BSD3
 	Maintainer  : cooper.charles.m@gmail.com
 	Stability   : experimental
-	Portability : POSIX
+	Portability : portable
 
   This module is a drop-in replacement for `Data.Map`. It is intended to be imported as @import qualified Data.Map.Extensions as Map@.
 -}
