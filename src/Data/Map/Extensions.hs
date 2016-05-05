@@ -20,7 +20,6 @@ module Data.Map.Extensions (
   keepKeys,
   dropKeys,
 
-
   filterM,
   transpose,
 
@@ -91,7 +90,9 @@ slice m l r = let
   ret' = case bot of
     Nothing -> ret                     -- O(0)
     Just v  -> Map.insert l v ret      -- O(log n)
-  in ret'
+  in if l > r
+    then Map.empty
+    else ret'
 
 -- | Inclusive index-based slice.
 -- Run an inclusive slice given left and right indices.
@@ -106,7 +107,9 @@ slicei m l sz = let
   len = Map.size m                     -- O(1)
   lv  = fst $ elemAt (max 0       l) m -- O(log n)
   rv  = fst $ elemAt (min (len-1) r) m -- O(log n)
-  in slice m lv rv                     -- O(log n)
+  in case Map.null m of
+    True  -> empty
+    False -> slice m lv rv                     -- O(log n)
 
 dropLeft :: Int -> Map k v -> Map k v
 dropLeft n m | n <= 0      = m
