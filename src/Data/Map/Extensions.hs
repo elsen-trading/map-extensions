@@ -31,6 +31,7 @@ module Data.Map.Extensions (
   groupElemsBy,
 
   fromList2,
+  fromAscList2,
   fromLists,
 
   lookup2,
@@ -143,7 +144,7 @@ transpose table = let
   foo = toList . fmap toList $ table
   bar = concatMap (\(a,bvs{-[(b,v)]-}) -> zip (repeat a) bvs) foo
   baz = (\(a,(b,v)) -> (b,a,v)) <$> bar
-  in fromList2 baz
+  in fromAscList2 baz
 
 -- | Run a grouping function over the keys of a `Map`.
 --
@@ -207,6 +208,11 @@ fromList2 :: (Ord a, Ord b) => [(a,b,v)] -> Lookup2 a b v
 fromList2 xs = let
   ys = (\(a,b,v) -> (a,[(b,v)])) <$> xs
   in fmap fromList $ fromListWith (++) ys
+
+fromAscList2 :: (Ord a, Ord b) => [(a,b,v)] -> Lookup2 a b v
+fromAscList2 xs = let
+  ys = (\(a,b,v) -> (a,[(b,v)])) <$> xs
+  in fmap (fromAscList . reverse) $ fromAscListWith (++) ys
 
 -- | Lookup a value two levels deep in a Lookup2
 lookup2 :: (Ord a, Ord b) => a -> b -> Lookup2 a b v -> Maybe v
