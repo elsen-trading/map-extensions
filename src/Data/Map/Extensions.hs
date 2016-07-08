@@ -150,13 +150,13 @@ transpose table = let
 --
 -- O(n * log(n))
 groupKeysBy :: (Ord a, Ord b) => (a -> b) -> Lookup a v -> Lookup2 b a v
-groupKeysBy f = fmap fromAscList . groupBy (f . fst) . toList
+groupKeysBy f = fmap fromList . groupBy (f . fst) . toList
 
 -- | Run a grouping function over the values of a `Map`.
 -- 
 -- O(n * log(n))
 groupElemsBy :: (Ord a, Ord b) => (v -> b) -> Lookup a v -> Lookup2 b a v
-groupElemsBy f = fmap fromAscList . groupBy (f . snd) . toList
+groupElemsBy f = fmap fromList . groupBy (f . snd) . toList
 
 -- | Run a grouping function over a `Map`.
 -- The supplied function will map each element of the list to a group.
@@ -171,7 +171,7 @@ groupElemsBy f = fmap fromAscList . groupBy (f . snd) . toList
 --
 -- O(n * log(n))
 groupBy :: Ord b => (a -> b) -> [a] -> Map b [a]
-groupBy f = fmap reverse . fromListWith (++) . fmap (\a -> (f a, pure a))
+groupBy f = fromListWith (++) . fmap (\a -> (f a, pure a))
 
 -- | Only keep keys that occur in the supplied `Set`.
 keepKeys :: Ord k => Set k -> Map k a -> Map k a
