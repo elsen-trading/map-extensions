@@ -143,8 +143,8 @@ transpose :: (Ord a, Ord b) => Lookup2 a b v -> Lookup2 b a v
 transpose table = let
   foo = toList . fmap toList $ table
   bar = concatMap (\(a,bvs{-[(b,v)]-}) -> zip (repeat a) bvs) foo
-  baz = (\(a,(b,v)) -> (b,a,v)) <$> bar
-  in fromAscList2 baz
+  baz = (\(a,(b,v)) -> (b,[(a,v)])) <$> bar
+  in fromDistinctAscList . reverse <$> fromAscListWith (++) baz
 
 -- | Run a grouping function over the keys of a `Map`.
 --
@@ -212,7 +212,7 @@ fromList2 xs = let
 fromAscList2 :: (Ord a, Ord b) => [(a,b,v)] -> Lookup2 a b v
 fromAscList2 xs = let
   ys = (\(a,b,v) -> (a,[(b,v)])) <$> xs
-  in fmap (fromAscList . reverse) $ fromAscListWith (++) ys
+  in fromAscList . reverse <$> fromAscListWith (++) ys
 
 -- | Lookup a value two levels deep in a Lookup2
 lookup2 :: (Ord a, Ord b) => a -> b -> Lookup2 a b v -> Maybe v
