@@ -144,7 +144,7 @@ transpose table = let
   foo = toList . fmap toList $ table
   bar = concatMap (\(a,bvs{-[(b,v)]-}) -> zip (repeat a) bvs) foo
   baz = (\(a,(b,v)) -> (b,[(a,v)])) <$> bar
-  in fromDistinctAscList . reverse <$> fromAscListWith (++) baz
+  in fromDistinctAscList . reverse <$> fromListWith (++) baz
 
 -- | Run a grouping function over the keys of a `Map`.
 --
