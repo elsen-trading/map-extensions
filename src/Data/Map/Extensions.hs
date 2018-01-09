@@ -1,24 +1,23 @@
 {-|
-	Module      : Data.Map.Extensions
-	Description : Extensions to Data.Map
-	Copyright   : (c) Elsen, Inc., 2016
-	License     : BSD3
-	Maintainer  : cooper.charles.m@gmail.com
-	Stability   : experimental
-	Portability : portable
+  Module      : Data.Map.Extensions
+  Description : Extensions to Data.Map
+  Copyright   : (c) Elsen, Inc., 2016
+  License     : BSD3
+  Maintainer  : cooper.charles.m@gmail.com
+  Stability   : experimental
+  Portability : portable
 
   This module is a drop-in replacement for `Data.Map`. It is intended to be imported as @import qualified Data.Map.Extensions as Map@.
 -}
 module Data.Map.Extensions (
   module Data.Map,
 
-  drop,
-  take,
+  dropLeft,
+  dropRight,
+  takeLeft,
+  takeRight,
   slice,
   slicei,
-
-  keepKeys,
-  dropKeys,
 
   filterM,
   transpose,
@@ -111,25 +110,29 @@ slicei m l sz = let
     True  -> empty
     False -> slice m lv rv                     -- O(log n)
 
+-- O(n * log n). this could be O(log n) if we used Map.split cleverly.
+-- | Drops `n` elements from the (left hand side of the) `Map`.
 dropLeft :: Int -> Map k v -> Map k v
 dropLeft n m | n <= 0      = m
              | Map.null m  = m
              | otherwise   = dropLeft (n-1) (deleteMin m)
 
+-- O(n * log n). this could be O(log n) if we used Map.split cleverly.
+-- | Drops `n` elements from the (right hand side of the) `Map`.
 dropRight :: Int -> Map k v -> Map k v
 dropRight n m | n <= 0     = m
               | Map.null m = m
               | otherwise  = dropRight (n-1) (deleteMax m)
 
 -- O(n * log n). this could be O(log n) if we used Map.split cleverly.
--- | Drops `n` elements from the (left hand side of the) `Map`.
-drop :: Int -> Map k v -> Map k v
-drop = dropLeft
+-- | Takes `n` elements from the (left hand side of the) `Map`.
+takeLeft :: Int -> Map k v -> Map k v
+takeLeft n m = dropRight (Map.size m - n) m
 
 -- O(n * log n). this could be O(log n) if we used Map.split cleverly.
--- | Takes `n` elements from the (left hand side of the) `Map`.
-take :: Int -> Map k v -> Map k v
-take n m = dropRight (Map.size m - n) m
+-- | Takes `n` elements from the (right hand side of the) `Map`.
+takeRight :: Int -> Map k v -> Map k v
+takeRight n m = dropLeft (Map.size m - n) m
 
 -- | This generalizes `Map.filter` to a monadic predicate.
 filterM :: (Ord k, Monad m) => (v -> m Bool) -> Map k v -> m (Map k v)
@@ -171,14 +174,6 @@ groupElemsBy f = fmap fromList . groupBy (f . snd) . toList
 -- O(n * log(n))
 groupBy :: Ord b => (a -> b) -> [a] -> Map b [a]
 groupBy f = fromListWith (++) . fmap (\a -> (f a, pure a))
-
--- | Only keep keys that occur in the supplied `Set`.
-keepKeys :: Ord k => Set k -> Map k a -> Map k a
-keepKeys keys m = intersection m (fromSet (const ()) keys)
-
--- | Drop the keys occurring in the supplied `Set`.
-dropKeys :: Ord k => Set k -> Map k a -> Map k a
-dropKeys keys m = m \\ (fromSet (const ()) keys)
 
 -- | Create a Map from a list of keys and a list of values.
 --
