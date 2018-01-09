@@ -2,7 +2,7 @@ name:                map-exts
 version:             0.1.1.0
 synopsis:            Extensions to Data.Map
 description:         Extensions to Data.Map
-homepage:            http://github.com/elsen-trading/map-extensions#readme
+homepage:            http://github.com/charles-cooper/map-exts#readme
 license:             BSD3
 license-file:        LICENSE
 author:              Charles Cooper
@@ -14,11 +14,11 @@ cabal-version:       >=1.10
 extra-source-files:
   README.md
   CHANGELOG.md
-  titanic.csv
+  examples/titanic.csv
 
 source-repository head
   type:     git
-  location: https://github.com/elsen-trading/map-extensions
+  location: https://github.com/charles-cooper/map-exts
 
 library
   hs-source-dirs:      src

@@ -99,7 +99,7 @@ fmtPct :: Double -> String
 fmtPct d = show (roundPlaces 2 (d*100)) <> "%"
 
 main = do
-  passengers <- decodeFile "titanic.csv"
+  passengers <- decodeFile "examples/titanic.csv"
   case passengers of
     Left  s -> putStrLn s
     Right ps -> do
